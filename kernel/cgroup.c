@@ -64,6 +64,9 @@
 #include <linux/file.h>
 #include <net/sock.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/cgroup.h>
+
 /*
  * pidlists linger the following amount before being destroyed.  The goal
  * is avoiding frequent destruction in the middle of consecutive read calls
@@ -1856,6 +1859,9 @@ static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
 		strcpy(root->release_agent_path, opts.release_agent);
 		spin_unlock(&release_agent_path_lock);
 	}
+
+	trace_cgroup_remount(root);
+
  out_unlock:
 	kfree(opts.release_agent);
 	kfree(opts.name);
@@ -2812,6 +2818,10 @@ static int cgroup_attach_task(struct cgroup *dst_cgrp,
 		ret = cgroup_migrate(leader, threadgroup, dst_cgrp->root);
 
 	cgroup_migrate_finish(&preloaded_csets);
+
+	if (!ret)
+		trace_cgroup_attach_task(dst_cgrp, leader, threadgroup);
+
 	return ret;
 }
 
@@ -3686,6 +3696,8 @@ static int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
 	mutex_lock(&cgroup_mutex);
 
 	ret = kernfs_rename(kn, new_parent, new_name_str);
+	if (!ret)
+		trace_cgroup_rename(cgrp);
 
 	mutex_unlock(&cgroup_mutex);
 
@@ -5127,6 +5139,8 @@ static void css_release_work_fn(struct work_struct *work)
 			ss->css_released(css);
 	} else {
 		/* cgroup release path */
+		trace_cgroup_release(cgrp);
+
 		cgroup_idr_remove(&cgrp->root->cgroup_idr, cgrp->id);
 		cgrp->id = -1;
 
@@ -5593,6 +5607,9 @@ static int cgroup_rmdir(struct kernfs_node *kn)
 		return 0;
 
 	ret = cgroup_destroy_locked(cgrp);
+
+	if (!ret)
+		trace_cgroup_rmdir(cgrp);
 
 	cgroup_kn_unlock(kn);
 	return ret;
