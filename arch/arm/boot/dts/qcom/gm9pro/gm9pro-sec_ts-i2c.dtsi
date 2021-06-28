@@ -1,0 +1,48 @@
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&usb3 {
+	gpio-switch = <&tlmm 113 0>;
+	gpio-ldo = <&tlmm 62 0x0>;
+};
+
+&i2c_1 {
+	status = "okay";
+
+	sec_ts@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&ts_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		sec,regulator_dvdd = "pm660_l11";
+		sec,regulator_avdd = "pm660l_l6";
+		sec,irq_gpio = <&tlmm 67 0>;
+		sec,num_lines = <0x1c 0x10>;
+		sec,max_coords = <0xfff 0xfff>;
+		sec,grip_area = <0x200>;
+		sec,project_name = "GM", "L9500";
+		sec,firmware_name = "sec_ts/s6sy661_V9.46.1.7_18042314.bin";
+	};
+};
+
+&pm660_gpios {
+	gpio@cb00 {
+		status = "ok";
+		qcom,mode = <1>;
+		qcom,pull = <5>;
+		qcom,vin-sel = <0>;
+		qcom,src-sel = <2>;
+		qcom,invert = <0>;
+		qcom,master-en = <1>;
+	};
+};

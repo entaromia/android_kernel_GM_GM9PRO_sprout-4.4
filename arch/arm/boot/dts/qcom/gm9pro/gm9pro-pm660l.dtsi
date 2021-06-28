@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,28 +9,23 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-/*
-&cdc_pdm_gpios {
-	status = "disabled";
+
+/* msm-pm660l.dtsi common diff */
+
+&green_led {
+	qcom,start-idx = <0>;
+	qcom,idx-len = <22>;
+	qcom,duty-pcts =
+		[01 0a 14 1e 28 32 3c 46 50 5a 64
+		64 5a 50 46 3c 32 28 1e 14 0a 01];
+	qcom,use-blink;
 };
 
-&cdc_comp_gpios {
-	status = "disabled";
+&blue_led {
+	qcom,start-idx = <0>;
+	qcom,idx-len = <22>;
+	qcom,duty-pcts =
+		[01 0a 14 1e 28 32 3c 46 50 5a 64
+		64 5a 50 46 3c 32 28 1e 14 0a 01];
+	qcom,use-blink;
 };
-
-&cdc_dmic_gpios {
-	status = "disabled";
-};
-
-&cdc_sdw_gpios {
-	status = "disabled";
-};
-
-&wsa_spkr_en1 {
-	status = "disabled";
-};
-
-&wsa_spkr_en2 {
-	status = "disabled";
-};
-*/

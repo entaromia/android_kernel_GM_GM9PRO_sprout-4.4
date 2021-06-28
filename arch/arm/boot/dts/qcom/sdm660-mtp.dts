@@ -16,6 +16,7 @@
 #include "sdm660.dtsi"
 #include "sdm660-mtp.dtsi"
 #include "sdm660-external-codec.dtsi"
+#include "gm9pro/gm9pro-base.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM 660 PM660 + PM660L MTP";

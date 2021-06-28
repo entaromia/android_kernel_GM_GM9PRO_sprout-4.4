@@ -1,0 +1,228 @@
+#include "gm9pro-sdm660-mtp.dtsi"
+#include "gm9pro-pm660.dtsi"
+#include "gm9pro-pm660l.dtsi"
+#include "gm9pro-camera-sensor-mtp.dtsi"
+#include "gm9pro-sec_ts-i2c.dtsi"
+
+&dai_mi2s0 {
+	qcom,msm-mi2s-rx-lines = <1>;
+	qcom,msm-mi2s-tx-lines = <2>;
+};
+
+&glink_spi_xprt_wdsp {
+	status = "disabled";
+};
+
+&glink_fifo_wdsp {
+	status = "disabled";
+};
+
+&glink_qos_wdsp {
+	status = "disabled";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&tavil_snd {
+	status = "disabled";
+};
+
+&int_codec {
+	status = "okay";
+	qcom,msm-micbias1-ext-cap;
+	qcom,wsa-switch-enable-gpio = <&tlmm 56 0>;
+	qcom,cdc-pdm-gpios = <&cdc_pdm_gpios>;
+	qcom,cdc-comp-gpios = <&cdc_comp_gpios>;
+	qcom,cdc-dmic-gpios = <&cdc_dmic_gpios>;
+	pinctrl-names = "pri_i2s_active", "pri_i2s_sleep";
+	pinctrl-0 = <&pri_mi2s_sck_active &pri_mi2s_ws_active &pri_mi2s_sd0_active &pri_mi2s_sd1_active>;
+	pinctrl-1 = <&pri_mi2s_sck_sleep &pri_mi2s_ws_sleep &pri_mi2s_sd0_sleep &pri_mi2s_sd1_sleep>;
+	qcom,wsa-disable;
+
+	/delete-property/ qcom,msm-micbias2-ext-cap;
+	/delete-property/ qcom,us-euro-gpios;
+};
+
+&wcd9xxx_intc {
+	status = "disabled";
+};
+
+&clock_audio {
+	status = "disabled";
+};
+
+&wcd_rst_gpio {
+	status = "disabled";
+};
+
+&msm_sdw_codec {
+	status = "okay";
+};
+
+&cdc_sdw_gpios {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+};
+
+&wsa_spkr_en1 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+};
+
+&wsa_spkr_en2 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+};
+
+&msm_sdw_codec {
+	/delete-property/ qcom,cdc-sdw-gpios;
+};
+
+&soc {
+	/delete-node/ qcom,qbt1000;
+
+	gpio_keys {
+		camera_focus {
+			gpios = <&tlmm 64 1>;
+			gpio-key,wakeup;
+		};
+
+		/delete-node/ camera_snapshot;
+	};
+
+	dbmdx {
+		compatible = "dspg,dbmdx-codec";
+		status = "okay";
+		reset-gpio = <&tlmm 61 0>;
+		sv-gpio = <&tlmm 1 0>;
+		wakeup-gpio = <&tlmm 109 0>;
+		auto_buffering = <1>;
+		multi-interface-support = <1>;
+		cd-interfaces = <&dbmd4_spi>;
+		va-interfaces = <0 0 0 0>;
+		feature-va; /* enable VA */
+		va-firmware-name = "VT_D4_ver_392_OKG.bin";
+		va-config = <0x80000000 0x80000000 0x80000000 0x80290020 0x80220040 0x80158e8e 0x801b0020 0x80230000 0x801a0017 0x80105019 0x80000000 0x80000000 0x80000000>;
+		va-speeds = <0x0 0x70800 0x0 0xea600 0x0 0x1e8480 0x0 0x493e00 0x0 0x2dc6c0 0x0 0x493e00>;
+		va-mic-config = <0xf041 0x1044 0x0008>;
+		va-mic-mode = <4>;
+		master-clk-rate = <32768>;
+		firmware_id = <0xdbd4>;
+		use_gpio_for_wakeup = <1>; /* Use wakeup gpio */
+		wakeup_set_value = <0>;  /* Value to write to wakeup gpio */
+		auto_detection = <1>;
+		detection_buffer_channels = <0>;
+		min_samples_chunk_size = <128>;
+		pcm_streaming_mode = <1>;
+		boot_options = <0x200>; /* Verify chip id */
+		amodel_options = <0x0>;
+		send_uevent_on_detection = <1>;
+		send_uevent_after_buffering = <1>;
+		detection_after_buffering = <0>;
+		va_backlog_length = <0x514>;
+		va_backlog_length_okg = <0x3e8>;
+	};
+
+	dbmdx-snd-soc-platform {
+		compatible = "dspg,dbmdx-snd-soc-platform";
+	};
+
+	snd-dbmdx-mach-drv {
+		compatible = "dspg,snd-dbmdx-mach-drv";
+	};
+};
+
+&tlmm {
+	hall_int_pin: hall_int_pin {
+		hall_int_active: hall_int_active {
+			mux {
+				pins = "gpio73";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio73";
+				drive-strength = <0x6>;
+				bias-pull-up;
+			};
+		};
+
+		hall_int_suspend: hall_int_suspend {
+			mux {
+				pins = "gpio73";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio73";
+				drive-strength = <0x6>;
+				bias-pull-up;
+			};
+		};
+	};
+};
+
+&i2c_6 {
+	tfa98xx_spk@34 {
+		compatible = "nxp,tfa98xx";
+		reg = <0x34>;
+		i2c-pull-up;
+		vdd-supply = <&pm660l_l6>;
+		vcc_i2c-supply = <&pm660l_l6>;
+		reset-gpio = <&tlmm 77 0>;
+		irq-gpio = <&tlmm 75 0>;
+		status = "ok";
+	};
+
+	tfa98xx_rec@35 {
+		compatible = "nxp,tfa98xx";
+		reg = <0x35>;
+		i2c-pull-up;
+		vdd-supply = <&pm660l_l6>;
+		vcc_i2c-supply = <&pm660l_l6>;
+		reset-gpio = <&tlmm 107 0>;
+		irq-gpio = <&tlmm 108 0>;
+		status = "ok";
+	};
+};
+
+&pm660l_l6 {
+	regulator-min-microvolt = <3300000>;
+};
+
+&spi_7 {
+	dbmd4_spi: dbmd4_interface@0 {
+		compatible = "dspg,dbmd4-spi";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+		read-chunk-size  = <0x2000>;    /* 8192 bytes   */
+		write-chunk-size = <0x20000>;   /* 131072 bytes */
+		dma_min_buffer_size = <0>;
+	};
+};
+
+&slim_aud {
+	status = "disabled";
+
+	tavil_codec {
+		status = "disabled";
+	};
+
+	msm_dai_slim {
+		status = "disabled";
+	};
+};
+
+&pmic_analog_codec {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	pinctrl-0 = <&mdss_en_vdd_active &mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_en_vdd_suspend &mdss_dsi_suspend &mdss_te_suspend>;
+};
