@@ -212,7 +212,7 @@ endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
-ifeq (1,1)
+ifeq ($(CONFIG_MACH_GM_GM9PRO_SPROUT),y)
 dtb-$(CONFIG_ARCH_SDM660) += sdm660-mtp.dtb
 else
 dtb-$(CONFIG_ARCH_SDM660) += sdm660-sim.dtb \
