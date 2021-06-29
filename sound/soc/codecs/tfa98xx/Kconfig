@@ -1,0 +1,10 @@
+config SND_SOC_TFA98XX
+	tristate "TFA98XX smart amplifier support"
+	depends on I2C
+	depends on LEDS_CLASS
+	help
+	  The TFA98xx is a DSP controlled smart amplifier that can generate
+	  waveforms and process a wide range of vibration effects.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called snd_soc_tfa98xx.
