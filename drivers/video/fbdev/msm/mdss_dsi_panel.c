@@ -216,6 +216,14 @@ static struct dsi_cmd_desc backlight_cmd = {
 	led_pwm1
 };
 
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+static char led_pwm2[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
+static struct dsi_cmd_desc backlight_cmd2 = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm2)},
+	led_pwm2
+};
+#endif
+
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
@@ -229,10 +237,28 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	pr_debug("%s: level=%d\n", __func__, level);
 
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	if (ctrl->bklt_max > 255) {
+		u8 hdata, ldata;
+
+		hdata = level / 240;
+		ldata = level % 240;
+
+		led_pwm2[1] = hdata;
+		led_pwm2[2] = ldata;
+	} else {
+		led_pwm1[1] = (unsigned char)level;
+	}
+#else
 	led_pwm1[1] = (unsigned char)level;
+#endif
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	cmdreq.cmds = ctrl->bklt_max > 255 ? &backlight_cmd2 : &backlight_cmd;
+#else
 	cmdreq.cmds = &backlight_cmd;
+#endif
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_DCS;
 	cmdreq.rlen = 0;
