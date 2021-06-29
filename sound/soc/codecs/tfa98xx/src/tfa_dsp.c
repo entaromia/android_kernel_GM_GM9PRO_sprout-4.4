@@ -3852,7 +3852,7 @@ enum tfa_error tfa_dev_set_state(struct tfa_device *tfa, enum tfa_state state, i
 		/* Make sure the DSP is running! */
 		do {
 			err = tfa98xx_dsp_system_stable(tfa, &ready);
-			if (err != tfa_error_ok)
+			if (err != Tfa98xx_Error_Ok)
 				return (enum tfa_error) err;
 			if (ready)
 				break;
