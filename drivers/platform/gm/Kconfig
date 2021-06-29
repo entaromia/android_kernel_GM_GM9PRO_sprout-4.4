@@ -1,0 +1,5 @@
+config MACH_GM_GM9PRO_SPROUT
+	bool "GM 9 Pro device"
+	depends on ARCH_QCOM
+	help
+	  Support for GM 9 Pro product
