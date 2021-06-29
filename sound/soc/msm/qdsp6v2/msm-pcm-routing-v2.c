@@ -22356,6 +22356,10 @@ end:
 }
 
 
+#ifdef CONFIG_SND_SOC_DBMDX
+extern const struct snd_kcontrol_new dbmdx_va_snd_controls[10];
+#endif
+
 /* Not used but frame seems to require it */
 static int msm_routing_probe(struct snd_soc_platform *platform)
 {
@@ -22393,6 +22397,11 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 
 	snd_soc_add_platform_controls(platform, native_mode_controls,
 				ARRAY_SIZE(native_mode_controls));
+
+	#ifdef CONFIG_SND_SOC_DBMDX
+	snd_soc_add_platform_controls(platform, dbmdx_va_snd_controls,
+				ARRAY_SIZE(dbmdx_va_snd_controls));
+	#endif
 
 	msm_qti_pp_add_controls(platform);
 

@@ -4098,6 +4098,83 @@ int msm_anlg_codec_info_create_codec_entry(struct snd_info_entry *codec_root,
 }
 EXPORT_SYMBOL(msm_anlg_codec_info_create_codec_entry);
 
+#ifdef CONFIG_SND_SOC_DBMDX
+struct snd_soc_codec *platform_codec;
+int enable_mic_bias(bool enable) {
+
+	int ret = 0;
+	struct snd_soc_codec *codec = platform_codec;
+	struct sdm660_cdc_priv *sdm660_cdc =
+					snd_soc_codec_get_drvdata(codec);
+	struct on_demand_supply *supply;
+
+	supply = &sdm660_cdc->on_demand_list[0];
+
+	if (!supply->supply) {
+		dev_err(codec->dev, "%s: err mic_bias supply not present \n",
+			__func__);
+		return ret;
+	}
+
+	if (enable) {
+		if (atomic_inc_return(&supply->ref) == 1) {
+			ret = regulator_set_voltage(supply->supply,
+						    supply->min_uv,
+						    supply->max_uv);
+			if (ret) {
+				dev_err(codec->dev,
+					"Setting regulator voltage(en) for micbias with err = %d\n",
+					ret);
+				return -EPERM;
+			}
+			ret = regulator_set_load(supply->supply,
+						 supply->optimum_ua);
+			if (ret < 0) {
+				dev_err(codec->dev,
+					"Setting regulator optimum mode(en) failed for micbias with err = %d\n",
+					ret);
+				return -EPERM;
+			}
+			ret = regulator_enable(supply->supply);
+		}
+		if (ret)
+			dev_err(codec->dev, "%s: Failed to enable mic bias1\n", __func__);
+
+		snd_soc_update_bits(platform_codec, MSM89XX_PMIC_ANALOG_MICB_1_EN, 0x80, 0x80);
+
+
+	} else {
+		if (atomic_read(&supply->ref) == 0) {
+			dev_dbg(codec->dev, "%s: mic bias1 supply has been disabled.\n", __func__);
+			return -EPERM;
+		}
+		if (atomic_dec_return(&supply->ref) == 0) {
+			ret = regulator_disable(supply->supply);
+			if (ret)
+				dev_err(codec->dev, "%s: Failed to disable mic bias1\n", __func__);
+			ret = regulator_set_voltage(supply->supply,
+						    0,
+						    supply->max_uv);
+			if (ret) {
+				dev_err(codec->dev,
+					"Setting regulator voltage(dis) failed for micbias with err = %d\n",
+					ret);
+				return -EPERM;
+			}
+			ret = regulator_set_load(supply->supply, 0);
+			if (ret < 0)
+				dev_err(codec->dev,
+					"Setting regulator optimum mode(dis) failed for micbias with err = %d\n",
+					ret);
+		}
+
+		snd_soc_update_bits(platform_codec, MSM89XX_PMIC_ANALOG_MICB_1_EN, 0x80, 0x00);
+	}
+
+	return 0;
+}
+#endif
+
 static int msm_anlg_cdc_soc_probe(struct snd_soc_codec *codec)
 {
 	struct sdm660_cdc_priv *sdm660_cdc;
@@ -4213,6 +4290,10 @@ static int msm_anlg_cdc_soc_probe(struct snd_soc_codec *codec)
 	snd_soc_dapm_ignore_suspend(dapm, "PDM Capture");
 
 	snd_soc_dapm_sync(dapm);
+
+#ifdef CONFIG_SND_SOC_DBMDX
+	platform_codec = codec;
+#endif
 
 	return 0;
 }
