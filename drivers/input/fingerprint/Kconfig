@@ -1,0 +1,4 @@
+config FINGERPRINT_FPC1020
+	bool "FPC1020 Driver"
+	help
+	  This driver supports FPC1020 fingerprint sensor.
