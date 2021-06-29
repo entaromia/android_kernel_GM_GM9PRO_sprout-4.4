@@ -1622,11 +1622,11 @@ static int sec_ts_pinctrl_configure(struct sec_ts_data *ts, bool enable)
 	input_info(true, &ts->client->dev, "%s: %s\n", __func__, enable ? "ACTIVE" : "SUSPEND");
 
 	if (enable) {
-		state = pinctrl_lookup_state(ts->plat_data->pinctrl, "on_state");
+		state = pinctrl_lookup_state(ts->plat_data->pinctrl, "pmx_ts_active");
 		if (IS_ERR(ts->plat_data->pinctrl))
 			input_err(true, &ts->client->dev, "%s: could not get active pinstate\n", __func__);
 	} else {
-		state = pinctrl_lookup_state(ts->plat_data->pinctrl, "off_state");
+		state = pinctrl_lookup_state(ts->plat_data->pinctrl, "pmx_ts_suspend");
 		if (IS_ERR(ts->plat_data->pinctrl))
 			input_err(true, &ts->client->dev, "%s: could not get suspend pinstate\n", __func__);
 	}
