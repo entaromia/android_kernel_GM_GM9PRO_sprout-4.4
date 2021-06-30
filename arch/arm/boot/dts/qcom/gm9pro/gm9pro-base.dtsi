@@ -226,3 +226,13 @@
 	pinctrl-0 = <&mdss_en_vdd_active &mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_en_vdd_suspend &mdss_dsi_suspend &mdss_te_suspend>;
 };
+
+&firmware {
+	android {
+		fstab {
+			vendor {
+				fsmgr_flags = "wait,slotselect";
+			};
+		};
+	};
+};
