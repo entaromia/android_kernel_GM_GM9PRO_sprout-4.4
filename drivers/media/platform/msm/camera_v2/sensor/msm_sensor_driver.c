@@ -849,6 +849,19 @@ int32_t msm_sensor_driver_probe(void *setting,
 		goto free_slave_info;
 	}
 
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	/* Avoid probing non-existent sensors */ 
+	if (strcmp(slave_info->eeprom_name, "imx363_ofilm_ogc1195_back1_i") == 0 ||
+		strcmp(slave_info->eeprom_name, "s5k3h7_ofilm_off1012_front_iii") == 0 ||
+		strcmp(slave_info->eeprom_name, "s5k4h8_ofilm_ogc0831_back2_i") == 0) {
+		CDBG("Sensor name %d match, continue\n", slave_info->eeprom_name);
+	} else {
+		CDBG("Sensor name %d does not match, break\n", slave_info->eeprom_name);
+		rc = -EFAULT;
+		goto free_slave_info;
+	}
+#endif
+
 	/* Print slave info */
 	CDBG("camera id %d Slave addr 0x%X addr_type %d\n",
 		slave_info->camera_id, slave_info->slave_addr,
