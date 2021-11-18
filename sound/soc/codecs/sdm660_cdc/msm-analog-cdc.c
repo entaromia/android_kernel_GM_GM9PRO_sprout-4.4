@@ -33,6 +33,10 @@
 #include "msm-cdc-common.h"
 #include "../../msm/sdm660-common.h"
 #include "../wcd-mbhc-v2.h"
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+#include <linux/of_gpio.h>
+#include <linux/mfd/msm-cdc-pinctrl.h>
+#endif /* CONFIG_MACH_GM_GM9PRO_SPROUT */
 
 #define DRV_NAME "pmic_analog_codec"
 #define SDM660_CDC_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -1866,6 +1870,40 @@ static int msm_anlg_cdc_spk_boost_set(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#if defined(CONFIG_MACH_GM_GM9PRO_SPROUT)
+static int msm_anlg_cdc_rcv_analog_switch_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int msm_anlg_cdc_rcv_analog_switch_set(struct snd_kcontrol *kcontrol,
+					  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sdm660_cdc_priv *sdm660_cdc =
+					snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s: ucontrol->value.integer.value[0] = %ld\n",
+		__func__, ucontrol->value.integer.value[0]);
+
+	switch (ucontrol->value.integer.value[0]) {
+	case 1:
+		if (gpio_is_valid(sdm660_cdc->rcv_switch))
+			gpio_direction_output(sdm660_cdc->rcv_switch, 1);
+		break;
+	case 0:
+	default:
+		if (gpio_is_valid(sdm660_cdc->rcv_switch))
+			gpio_direction_output(sdm660_cdc->rcv_switch, 0);
+		break;
+	}
+	dev_dbg(codec->dev, "%s: sdm660_cdc->rcv_analog_switch_set = %d\n",
+		__func__, ucontrol->value.integer.value[0]);
+	return 0;
+}
+#endif
+
 static int msm_anlg_cdc_ext_spk_boost_get(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
 {
@@ -1939,6 +1977,14 @@ static const struct soc_enum msm_anlg_cdc_spk_boost_ctl_enum[] = {
 		SOC_ENUM_SINGLE_EXT(2, msm_anlg_cdc_spk_boost_ctrl_text),
 };
 
+#if defined(CONFIG_MACH_GM_GM9PRO_SPROUT)
+static const char * const msm_anlg_cdc_rcv_analog_switch_ctrl_text[] = {
+		"OFF", "ON"};
+static const struct soc_enum msm_anlg_cdc_rcv_analog_switch_ctl_enum[] = {
+		SOC_ENUM_SINGLE_EXT(2, msm_anlg_cdc_rcv_analog_switch_ctrl_text),
+};
+#endif
+
 static const char * const msm_anlg_cdc_ext_spk_boost_ctrl_text[] = {
 		"DISABLE", "ENABLE"};
 static const struct soc_enum msm_anlg_cdc_ext_spk_boost_ctl_enum[] = {
@@ -1974,6 +2020,11 @@ static const struct snd_kcontrol_new msm_anlg_cdc_snd_controls[] = {
 
 	SOC_ENUM_EXT("Speaker Boost", msm_anlg_cdc_spk_boost_ctl_enum[0],
 		msm_anlg_cdc_spk_boost_get, msm_anlg_cdc_spk_boost_set),
+
+#if defined(CONFIG_MACH_GM_GM9PRO_SPROUT)
+	SOC_ENUM_EXT("RCV ANALOG SWITCH", msm_anlg_cdc_rcv_analog_switch_ctl_enum[0],
+		msm_anlg_cdc_rcv_analog_switch_get, msm_anlg_cdc_rcv_analog_switch_set),
+#endif
 
 	SOC_ENUM_EXT("Ext Spk Boost", msm_anlg_cdc_ext_spk_boost_ctl_enum[0],
 		msm_anlg_cdc_ext_spk_boost_get, msm_anlg_cdc_ext_spk_boost_set),
@@ -4723,6 +4774,22 @@ static int msm_anlg_cdc_probe(struct platform_device *pdev)
 			__func__, ret);
 		goto err_supplies;
 	}
+
+#if defined(CONFIG_MACH_GM_GM9PRO_SPROUT)
+	sdm660_cdc->rcv_switch = of_get_named_gpio(pdev->dev.of_node,
+			"qcom,wsa-switch-enable-gpio", 0);
+	if (sdm660_cdc->rcv_switch < 0) {
+		dev_err(&pdev->dev,
+			"property %s in node %s not found %d\n",
+			"qcom,wsa-switch-enable-gpio", pdev->dev.of_node->full_name,
+			sdm660_cdc->rcv_switch);
+	}
+	if (gpio_is_valid(sdm660_cdc->rcv_switch)) {
+		gpio_request(sdm660_cdc->rcv_switch, "rcv_switch");
+		gpio_direction_output(sdm660_cdc->rcv_switch, 0);
+	}
+#endif
+
 	BLOCKING_INIT_NOTIFIER_HEAD(&sdm660_cdc->notifier);
 	BLOCKING_INIT_NOTIFIER_HEAD(&sdm660_cdc->notifier_mbhc);
 
