@@ -32,7 +32,6 @@
 &int_codec {
 	status = "okay";
 	qcom,msm-micbias1-ext-cap;
-	qcom,wsa-switch-enable-gpio = <&tlmm 56 0>;
 	qcom,cdc-pdm-gpios = <&cdc_pdm_gpios>;
 	qcom,cdc-comp-gpios = <&cdc_comp_gpios>;
 	qcom,cdc-dmic-gpios = <&cdc_dmic_gpios>;
@@ -220,6 +219,7 @@
 
 &pmic_analog_codec {
 	status = "okay";
+	qcom,wsa-switch-enable-gpio = <&tlmm 56 0>;
 };
 
 &mdss_dsi0 {
