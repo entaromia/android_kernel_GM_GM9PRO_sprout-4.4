@@ -552,8 +552,10 @@ static ssize_t pressure_enable_strore(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t count)
 {
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+#endif
 	int ret;
 	unsigned long value = 0;
 
@@ -563,7 +565,7 @@ static ssize_t pressure_enable_strore(struct device *dev,
 	ret = kstrtoul(buf, 10, &value);
 	if (ret != 0)
 		return ret;
-
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (!ts->use_sponge)
 		return -EINVAL;
 
@@ -587,7 +589,7 @@ static ssize_t pressure_enable_strore(struct device *dev,
 	ts->pressure_caller_id = value;
 
 	sec_ts_set_custom_library(ts);
-
+#endif
 	return count;
 }
 
@@ -3334,14 +3336,16 @@ static void drawing_test_enable(void *device_data)
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	int ret;
-
+#endif
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
 		snprintf(buff, sizeof(buff), "%s", "NG");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 		if (ts->use_sponge) {
 			if (sec->cmd_param[0])
 				ts->lowpower_mode &= ~SEC_TS_MODE_SPONGE_FORCE_KEY;
@@ -3361,6 +3365,10 @@ static void drawing_test_enable(void *device_data)
 			snprintf(buff, sizeof(buff), "%s", "NA");
 			sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
 		}
+#else
+		snprintf(buff, sizeof(buff), "%s", "NA");
+		sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
+#endif
 	}
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -5330,7 +5338,9 @@ OUT:
 static void spay_enable(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+#endif
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	sec_cmd_set_default_result(sec);
@@ -5338,6 +5348,7 @@ static void spay_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (sec->cmd_param[0]) {
 		if (ts->use_sponge)
 			ts->lowpower_mode |= SEC_TS_MODE_SPONGE_SPAY;
@@ -5350,6 +5361,7 @@ static void spay_enable(void *device_data)
 
 	if (ts->use_sponge)
 		sec_ts_set_custom_library(ts);
+#endif
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5370,7 +5382,10 @@ static void set_aod_rect(void *device_data)
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 	u8 data[10] = {0x02, 0};
-	int ret, i;
+	int i;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
+	int ret;
+#endif
 
 	sec_cmd_set_default_result(sec);
 
@@ -5384,6 +5399,7 @@ static void set_aod_rect(void *device_data)
 		ts->rect_data[i] = sec->cmd_param[i];
 	}
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (ts->use_sponge) {
 		disable_irq(ts->client->irq);
 		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SPONGE_WRITE_PARAM, &data[0], 10);
@@ -5399,18 +5415,21 @@ static void set_aod_rect(void *device_data)
 		}
 		enable_irq(ts->client->irq);
 	}
+#endif
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 	return;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 NG:
 	enable_irq(ts->client->irq);
 	snprintf(buff, sizeof(buff), "%s", "NG");
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
+#endif
 }
 
 
@@ -5421,10 +5440,14 @@ static void get_aod_rect(void *device_data)
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 	u8 data[8] = {0x02, 0};
 	u16 rect_data[4] = {0, };
-	int ret, i;
+	int i;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
+	int ret;
+#endif
 
 	sec_cmd_set_default_result(sec);
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (ts->use_sponge) {
 		disable_irq(ts->client->irq);
 		ret = ts->sec_ts_read_sponge(ts, data, 8);
@@ -5434,6 +5457,7 @@ static void get_aod_rect(void *device_data)
 		}
 		enable_irq(ts->client->irq);
 	}
+#endif
 
 	for (i = 0; i < 4; i++)
 		rect_data[i] = (data[i * 2 + 1] & 0xFF) << 8 | (data[i * 2] & 0xFF);
@@ -5446,18 +5470,22 @@ static void get_aod_rect(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 	return;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 NG:
 	enable_irq(ts->client->irq);
 	snprintf(buff, sizeof(buff), "%s", "NG");
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
+#endif
 }
 
 static void aod_enable(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+#endif
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	sec_cmd_set_default_result(sec);
@@ -5465,6 +5493,7 @@ static void aod_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (sec->cmd_param[0]) {
 		if (ts->use_sponge)
 			ts->lowpower_mode |= SEC_TS_MODE_SPONGE_AOD;
@@ -5477,6 +5506,7 @@ static void aod_enable(void *device_data)
 
 	if (ts->use_sponge)
 		sec_ts_set_custom_library(ts);
+#endif
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -5493,11 +5523,13 @@ NG:
 static void singletap_enable(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+#endif
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	sec_cmd_set_default_result(sec);
-
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (!ts->use_sponge || sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
@@ -5510,18 +5542,19 @@ static void singletap_enable(void *device_data)
 			__func__, sec->cmd_param[0] ? "on" : "off", ts->lowpower_mode);
 
 	sec_ts_set_custom_library(ts);
-
+#endif
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 	return;
-
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 NG:
 	snprintf(buff, sizeof(buff), "%s", "NG");
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
+#endif
 }
 
 /*

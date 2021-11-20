@@ -857,8 +857,10 @@ void sec_ts_reinit(struct sec_ts_data *ts)
 					__func__, SEC_TS_CMD_SET_TOUCHFUNCTION);
 	}
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (ts->use_sponge)
 		sec_ts_set_custom_library(ts);
+#endif
 
 	/* Power mode */
 	if (ts->power_status == SEC_TS_STATE_LPM) {
@@ -2572,7 +2574,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 
 		if (!ts->reset_is_on_going)
 			return;
-
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 		if ((ts->lowpower_mode & SEC_TS_MODE_SPONGE_AOD) && ts->use_sponge) {
 			int i, ret;
 			u8 data[10] = {0x02, 0};
@@ -2592,6 +2594,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 				input_err(true, &ts->client->dev, "%s: Failed to send notify\n", __func__);
 			enable_irq(ts->client->irq);
 		}
+#endif
 	}
 	ts->reset_is_on_going = false;
 }
@@ -2632,11 +2635,13 @@ int sec_ts_set_lowpowermode(struct sec_ts_data *ts, u8 mode)
 			mode == TO_LOWPOWER_MODE ? "ENTER" : "EXIT", ts->lowpower_mode);
 
 	if (mode) {
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 		if (ts->use_sponge) {
 			ret = sec_ts_set_custom_library(ts);
 			if (ret < 0)
 				goto i2c_error;
 		}
+#endif
 
 		data = (ts->lowpower_mode & SEC_TS_MODE_LOWPOWER_FLAG) >> 1;
 		ret = sec_ts_i2c_write(ts, SEC_TS_CMD_WAKEUP_GESTURE_MODE, &data, 1);
@@ -2919,11 +2924,13 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 		goto err;
 	}
 
+#ifdef SEC_TS_SUPPORT_SPONGELIB
 	if (ts->use_sponge) {
 		ret = sec_ts_set_custom_library(ts);
 		if (ret < 0)
 			goto err;
 	}
+#endif
 
 	sec_ts_set_grip_type(ts, ONLY_EDGE_HANDLER);
 

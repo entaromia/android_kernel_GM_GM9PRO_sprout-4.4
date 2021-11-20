@@ -90,7 +90,7 @@
 #define MASK_8_BITS			0x00FF
 
 /* support feature */
-#define SEC_TS_SUPPORT_SPONGELIB	/* support display lab algorithm */
+/* #define SEC_TS_SUPPORT_SPONGELIB	 support display lab algorithm */
 
 #define TYPE_STATUS_EVENT_CMD_DRIVEN	0
 #define TYPE_STATUS_EVENT_ERR		1
