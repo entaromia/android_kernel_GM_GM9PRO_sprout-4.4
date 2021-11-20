@@ -184,7 +184,11 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+static int __weak_chg_icl_ua = 700000;
+#else
 static int __weak_chg_icl_ua = 500000;
+#endif
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 
@@ -1021,7 +1025,11 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 					      BATT_PROFILE_VOTER);
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
 		val->intval = POWER_SUPPLY_TECHNOLOGY_LIPO;
+#else
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_DONE:
 		rc = smblib_get_prop_batt_charge_done(chg, val);

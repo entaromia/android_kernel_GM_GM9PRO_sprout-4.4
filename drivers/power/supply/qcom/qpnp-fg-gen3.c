@@ -760,6 +760,9 @@ static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 
 #define FULL_CAPACITY	100
 #define FULL_SOC_RAW	255
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+#define FULL_SOC_REPORT_THR 250
+#endif
 static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 {
 	int rc;
@@ -776,6 +779,21 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 	 */
 	if (*msoc == FULL_SOC_RAW)
 		*msoc = 100;
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	/*
+	 * if raw msoc is >= 250 (now actual msoc is 98%), we report 1
+	 * more percent to optimze recharge soc to 100% to improve user
+	 * experience
+	 */
+	else if ((*msoc >= FULL_SOC_REPORT_THR - 2)
+			&& (*msoc < FULL_SOC_RAW) && chip->report_full) {
+		*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY, FULL_SOC_RAW) + 1;
+		if (*msoc >= FULL_CAPACITY)
+			*msoc = FULL_CAPACITY;
+	} else if (*msoc >= FULL_SOC_REPORT_THR - 4
+			&& *msoc <= FULL_SOC_REPORT_THR - 3 && chip->report_full)
+		*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY, FULL_SOC_RAW);
+#endif
 	else if (*msoc == 0)
 		*msoc = 0;
 	else
@@ -873,6 +891,9 @@ static bool is_debug_batt_id(struct fg_chip *chip)
 #define DEBUG_BATT_SOC	67
 #define BATT_MISS_SOC	50
 #define EMPTY_SOC	0
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+#define EMPTY_REPORT_SOC	1
+#endif
 static int fg_get_prop_capacity(struct fg_chip *chip, int *val)
 {
 	int rc, msoc;
@@ -2040,6 +2061,9 @@ static int fg_set_constant_chg_voltage(struct fg_chip *chip, int volt_uv)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+#define DEFAULT_RECHARGE_SOC_RAW	0xfd
+#endif
 static int fg_set_recharge_soc(struct fg_chip *chip, int recharge_soc)
 {
 	u8 buf;
@@ -2052,6 +2076,12 @@ static int fg_set_recharge_soc(struct fg_chip *chip, int recharge_soc)
 		return 0;
 
 	fg_encode(chip->sp, FG_SRAM_RECHARGE_SOC_THR, recharge_soc, &buf);
+
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	if ((buf <= DEFAULT_RECHARGE_SOC_RAW)
+			&& (chip->health != POWER_SUPPLY_HEALTH_WARM))
+		buf += 1;
+#endif
 	rc = fg_sram_write(chip,
 			chip->sp[FG_SRAM_RECHARGE_SOC_THR].addr_word,
 			chip->sp[FG_SRAM_RECHARGE_SOC_THR].addr_byte, &buf,
@@ -2148,9 +2178,16 @@ static int fg_adjust_recharge_voltage(struct fg_chip *chip)
 	recharge_volt_mv = chip->dt.recharge_volt_thr_mv;
 
 	/* Lower the recharge voltage in soft JEITA */
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	if (chip->health == POWER_SUPPLY_HEALTH_WARM)
+		recharge_volt_mv = 4050;
+	if (chip->health == POWER_SUPPLY_HEALTH_COOL)
+		recharge_volt_mv = 4282;
+#else
 	if (chip->health == POWER_SUPPLY_HEALTH_WARM ||
 			chip->health == POWER_SUPPLY_HEALTH_COOL)
 		recharge_volt_mv -= 200;
+#endif
 
 	rc = fg_set_recharge_voltage(chip, recharge_volt_mv);
 	if (rc < 0) {
@@ -2713,6 +2750,9 @@ static void status_change_work(struct work_struct *work)
 			struct fg_chip, status_change_work);
 	union power_supply_propval prop = {0, };
 	int rc, batt_temp;
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	int msoc = 0;
+#endif
 
 	if (!batt_psy_initialized(chip)) {
 		fg_dbg(chip, FG_STATUS, "Charger not available?!\n");
@@ -2742,7 +2782,19 @@ static void status_change_work(struct work_struct *work)
 		goto out;
 	}
 
+#if defined(CONFIG_MACH_GM_GM9PRO_SPROUT)
 	chip->charge_done = prop.intval;
+	if (chip->charge_done && !chip->report_full) {
+		chip->report_full = true;
+	} else if (!chip->charge_done && chip->report_full) {
+		rc = fg_get_msoc_raw(chip, &msoc);
+		if (rc < 0)
+			pr_err("Error in getting msoc, rc=%d\n", rc);
+		if (msoc < FULL_SOC_REPORT_THR - 4)
+			chip->report_full = false;
+	}
+#endif
+
 	fg_cycle_counter_update(chip);
 	fg_cap_learning_update(chip);
 
@@ -5609,8 +5661,18 @@ static void fg_gen3_shutdown(struct platform_device *pdev)
 {
 	struct fg_chip *chip = dev_get_drvdata(&pdev->dev);
 	int rc, bsoc;
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	int msoc;
 
+	rc = fg_get_prop_capacity(chip, &msoc);
+	if (rc < 0) {
+		pr_err("Error in getting capacity, rc=%d\n", rc);
+		return;
+	}
+	if (chip->charge_full || (msoc == 100)) {
+#else
 	if (chip->charge_full) {
+#endif
 		rc = fg_get_sram_prop(chip, FG_SRAM_BATT_SOC, &bsoc);
 		if (rc < 0) {
 			pr_err("Error in getting BATT_SOC, rc=%d\n", rc);
