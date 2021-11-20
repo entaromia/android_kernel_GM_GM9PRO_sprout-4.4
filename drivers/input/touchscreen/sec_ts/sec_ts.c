@@ -1234,7 +1234,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 								ts->cal_count, ts->tune_fix_ver,
 								ts->pressure_cal_base, ts->pressure_cal_delta,
 								ts->defect_probability);
-#else
+
 						input_info(true, &ts->client->dev,
 								"%s[R] tID:%d mc:%d tc:%d f:%d v:%02X%02X cal:%02X(%02X) id(%d,%d) p:%d noise:%x lp:(%x/%d) P%02XT%04X F%02X%02X D%05X\n",
 								ts->dex_name,
@@ -1298,7 +1298,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 								ts->coord[t_id].major, ts->coord[t_id].minor,
 								ts->touch_count,
 								ts->coord[t_id].ttype, ts->touch_noise_status);
-#else
+
 						input_info(true, &ts->client->dev,
 								"%s[P] tID:%d z:%d major:%d minor:%d tc:%d type:%X noise:%x\n",
 								ts->dex_name,
