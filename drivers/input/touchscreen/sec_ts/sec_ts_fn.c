@@ -1135,6 +1135,7 @@ static void sec_ts_cm_spec_over_check(struct sec_ts_data *ts)
 			specover_count_x, specover_count_y, spec_out_nv);
 }
 
+/*
 static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 {
 	int i = 0;
@@ -1190,6 +1191,7 @@ static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 	}
 	kfree(pStr);
 }
+*/
 
 static int sec_ts_read_frame(struct sec_ts_data *ts, u8 type, short *min,
 				short *max, bool save_result)
@@ -1256,7 +1258,7 @@ static int sec_ts_read_frame(struct sec_ts_data *ts, u8 type, short *min,
 	input_info(true, &ts->client->dev, "%s: 02X%02X%02X readbytes=%d\n", __func__,
 			pRead[0], pRead[1], pRead[2], readbytes);
 #endif
-	sec_ts_print_frame(ts, min, max);
+	/* sec_ts_print_frame(ts, min, max); */
 
 	if (type == TYPE_OFFSET_DATA_SDC)
 		sec_ts_cm_spec_over_check(ts);
