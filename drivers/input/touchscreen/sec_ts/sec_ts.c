@@ -12,6 +12,20 @@
 
 struct sec_ts_data *tsp_info;
 
+#ifdef CONFIG_SEC_TS_WAKE_GESTURES
+#include <linux/kernel.h>
+#include "include/sec_ts_wake_gestures.h"
+
+struct sec_ts_data *tsp_data;
+extern bool is_screen_off;
+bool is_sec_ts_probed = false;
+
+bool scr_suspended(void)
+{
+	return is_screen_off;
+}
+#endif
+
 #include "include/sec_ts.h"
 
 #ifdef CONFIG_SECURE_TOUCH
@@ -1322,6 +1336,11 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 						input_report_key(ts->input_dev, BTN_TOUCH, 1);
 						input_report_key(ts->input_dev, BTN_TOOL_FINGER, 1);
 
+#ifdef CONFIG_SEC_TS_WAKE_GESTURES
+							if (is_screen_off)
+								ts->coord[t_id].x += 5000;
+#endif
+
 						input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->coord[t_id].x);
 						input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->coord[t_id].y);
 						input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, ts->coord[t_id].major);
@@ -2365,6 +2384,11 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_err(true, &ts->client->dev, "%s: done\n", __func__);
 	input_log_fix();
 
+#ifdef CONFIG_SEC_TS_WAKE_GESTURES
+	tsp_data = ts;
+	is_sec_ts_probed = true;
+#endif
+
 	return 0;
 
 	/* need to be enabled when new goto statement is added */
@@ -2836,6 +2860,10 @@ static void sec_ts_shutdown(struct i2c_client *client)
 {
 	struct sec_ts_data *ts = i2c_get_clientdata(client);
 
+#ifdef CONFIG_SEC_TS_WAKE_GESTURES
+	is_sec_ts_probed = false;
+#endif
+
 	input_info(true, &ts->client->dev, "%s\n", __func__);
 
 	sec_ts_remove(client);
@@ -3039,6 +3067,25 @@ void trustedui_mode_off(void)
 {
 	if (!tsp_info)
 		return;
+}
+#endif
+
+#ifdef CONFIG_SEC_TS_WAKE_GESTURES
+void sec_ts_dt2w_enable(void)
+{
+	if (dt2w_switch)
+		enable_irq_wake(tsp_data->client->irq);
+}
+
+void sec_ts_dt2w_disable(void)
+{
+	if (dt2w_switch)
+		disable_irq_wake(tsp_data->client->irq);
+
+	if (dt2w_switch_changed) {
+		dt2w_switch = dt2w_switch_temp;
+		dt2w_switch_changed = false;
+	}
 }
 #endif
 
