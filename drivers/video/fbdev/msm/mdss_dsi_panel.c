@@ -32,13 +32,6 @@
 
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
-#ifdef CONFIG_SEC_TS_WAKE_GESTURES
-bool is_screen_off = false;
-extern bool is_sec_ts_probed;
-extern void sec_ts_dt2w_enable(void);
-extern void sec_ts_dt2w_disable(void);
-#endif
-
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -955,6 +948,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	struct dsi_panel_cmds *on_cmds;
 	int ret = 0;
 
+#if defined(CONFIG_TOUCHSCREEN_SEC_TS)
+	if (is_sec_ts_probed)
+		sec_ts_resume();
+#endif
+
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -991,12 +989,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	/* Ensure low persistence mode is set as before */
 	mdss_dsi_panel_apply_display_setting(pdata, pinfo->persist_mode);
-
-#if defined(CONFIG_SEC_TS_WAKE_GESTURES)
-	is_screen_off = false;
-	if (is_sec_ts_probed)
-		sec_ts_dt2w_disable();
-#endif
 
 end:
 	pr_debug("%s:-\n", __func__);
@@ -1047,6 +1039,11 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
 
+#if defined(CONFIG_TOUCHSCREEN_SEC_TS)
+	if (is_sec_ts_probed)
+		sec_ts_suspend();
+#endif
+
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -1071,11 +1068,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
 	}
 
-#if defined(CONFIG_SEC_TS_WAKE_GESTURES)
-	is_screen_off = true;
-	if (is_sec_ts_probed)
-		sec_ts_dt2w_enable();
-#endif
+
 
 end:
 	pr_debug("%s:-\n", __func__);

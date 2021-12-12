@@ -957,4 +957,10 @@ static inline enum dsi_physical_lane_id mdss_dsi_logical_to_physical_lane(
 	return i;
 }
 
+#ifdef CONFIG_TOUCHSCREEN_SEC_TS
+extern void sec_ts_resume(void);
+extern void sec_ts_suspend(void);
+extern bool is_sec_ts_probed;
+#endif /* CONFIG_TOUCHSCREEN_SEC_TS */
+
 #endif /* MDSS_DSI_H */
