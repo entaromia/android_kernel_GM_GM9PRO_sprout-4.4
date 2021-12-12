@@ -13,4 +13,4 @@ config TOUCHSCREEN_SEC_TS
           module will be called sec_ts.
 
 config SEC_TS_WAKE_GESTURES
-	bool "dt2w for samsung electronics touchscreen"
+	bool "DT2W support for Samsung Electronics Touchscreen"
