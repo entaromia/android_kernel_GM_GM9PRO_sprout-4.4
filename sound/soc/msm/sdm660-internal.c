@@ -1334,12 +1334,21 @@ static void *def_msm_int_wcd_mbhc_cal(void)
 	 */
 	btn_low[0] = 75;
 	btn_high[0] = 75;
+#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
+	btn_low[1] = 200;
+	btn_high[1] = 200;
+	btn_low[2] = 400;
+	btn_high[2] = 400;
+	btn_low[3] = 500;
+	btn_high[3] = 500;
+#else
 	btn_low[1] = 150;
 	btn_high[1] = 150;
 	btn_low[2] = 225;
 	btn_high[2] = 225;
 	btn_low[3] = 450;
 	btn_high[3] = 450;
+#endif
 	btn_low[4] = 500;
 	btn_high[4] = 500;
 
