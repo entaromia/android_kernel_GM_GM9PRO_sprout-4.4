@@ -524,7 +524,7 @@ int get_tsp_nvm_data(struct sec_ts_data *ts, u8 offset)
 
 	input_dbg(false, &ts->client->dev, "%s: SENSE OFF\n", __func__);
 
-	sec_ts_delay(100);
+	sec_ts_delay(50);
 
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_CLEAR_EVENT_STACK, NULL, 0);
 	if (ret < 0) {
@@ -534,7 +534,7 @@ int get_tsp_nvm_data(struct sec_ts_data *ts, u8 offset)
 
 	input_dbg(false, &ts->client->dev, "%s: CLEAR EVENT STACK\n", __func__);
 
-	sec_ts_delay(100);
+	sec_ts_delay(50);
 
 	sec_ts_locked_release_all_finger(ts);
 
@@ -747,7 +747,7 @@ static int execute_selftest(struct sec_ts_data *ts, bool save_result)
 		goto err_exit;
 	}
 
-	sec_ts_delay(350);
+	sec_ts_delay(50);
 
 	rc = sec_ts_wait_for_ready(ts, SEC_TS_VENDOR_ACK_SELF_TEST_DONE);
 	if (rc < 0) {

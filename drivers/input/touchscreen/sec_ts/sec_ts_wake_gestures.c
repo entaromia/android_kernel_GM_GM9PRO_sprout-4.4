@@ -136,11 +136,13 @@ static ssize_t doubletap2wake_show(struct device *dev,
 static ssize_t doubletap2wake_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
+	struct sec_ts_data *ts = input_get_drvdata(sec_ts_dev);
+
 	sscanf(buf, "%d ", &dt2w_switch_temp);
 	if (dt2w_switch_temp < 0 || dt2w_switch_temp > 1)
 		dt2w_switch_temp = 0;
 
-	if (sec_ts_is_suspended())
+	if (ts->screen_off)
 		dt2w_switch_changed = true;
 	else
 		dt2w_switch = dt2w_switch_temp;

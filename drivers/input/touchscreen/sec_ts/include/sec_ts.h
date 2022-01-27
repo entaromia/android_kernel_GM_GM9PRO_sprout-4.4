@@ -42,6 +42,11 @@
 #include <linux/pm_runtime.h>
 #include <soc/qcom/scm.h>
 
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+
 #define SECURE_TOUCH_ENABLE	1
 #define SECURE_TOUCH_DISABLE	0
 #define TZ_BLSP_MODIFY_OWNERSHIP_ID 3
@@ -259,7 +264,6 @@ struct sec_ts_data {
 	struct sec_ts_coordinate coord[MAX_SUPPORT_TOUCH_COUNT];
 
 	volatile u8 touch_noise_status;
-	volatile bool input_closed;
 
 	int touch_count;
 	int tx_count;
@@ -290,7 +294,7 @@ struct sec_ts_data {
 	struct wake_lock wakelock;
 	short *pFrame;
 
-	bool disabled;
+	bool screen_off;
 
 	int nv;
 	int cal_count;
@@ -325,6 +329,10 @@ struct sec_ts_data {
 	int (*sec_ts_i2c_read)(struct sec_ts_data *ts, u8 reg, u8 *data, int len);
 	int (*sec_ts_i2c_write_burst)(struct sec_ts_data *ts, u8 *data, int len);
 	int (*sec_ts_i2c_read_bulk)(struct sec_ts_data *ts, u8 *data, int len);
+
+#ifdef CONFIG_FB
+	struct notifier_block fb_notif;
+#endif
 };
 
 struct sec_ts_plat_data {
@@ -369,9 +377,8 @@ void minority_report_sync_latest_value(struct sec_ts_data *ts);
 #endif
 void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read);
 void sec_ts_reinit(struct sec_ts_data *ts);
-extern void sec_ts_suspend(void);
-extern void sec_ts_resume(void);
-extern bool is_sec_ts_probed;
+void sec_ts_suspend(struct input_dev *dev);
+void sec_ts_resume(struct input_dev *dev);
 
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
 int sec_ts_wake_gestures_init(struct sec_ts_data *ts);
@@ -380,7 +387,6 @@ void sec_ts_detect_doubletap2wake(int x, int y);
 extern int dt2w_switch;
 extern int dt2w_switch_temp;
 extern bool dt2w_switch_changed;
-extern bool sec_ts_is_suspended(void);
 #endif
 
 /*

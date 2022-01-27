@@ -12,17 +12,6 @@
 
 #include "include/sec_ts.h"
 
-struct sec_ts_data *tsp_data;
-bool is_sec_ts_probed = false;
-
-#ifdef CONFIG_SEC_TS_WAKE_GESTURES
-bool is_screen_off = false;
-bool sec_ts_is_suspended(void)
-{
-	return is_screen_off;
-}
-#endif
-
 static void sec_ts_read_info_work(struct work_struct *work);
 
 #ifdef USE_OPEN_CLOSE
@@ -818,9 +807,8 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					switch (ts->coord[t_id].action) {
 					case SEC_TS_COORDINATE_ACTION_RELEASE:
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
-						if (sec_ts_is_suspended()) {
-							return;
-						}
+						if (ts->screen_off)
+							goto out;
 #endif
 						input_mt_slot(ts->input_dev, t_id);
 						input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
@@ -838,18 +826,16 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 						ts->coord[t_id].palm_count = 0;
 
 						break;
-
 					case SEC_TS_COORDINATE_ACTION_PRESS:
-						ts->touch_count++;
-						ts->all_finger_count++;
-
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
-						if (sec_ts_is_suspended() && dt2w_switch) {
-							sec_ts_detect_doubletap2wake(ts->coord[t_id].x, ts->coord[t_id].y);
-							return;
+						if (ts->screen_off) {
+							if (dt2w_switch)
+								sec_ts_detect_doubletap2wake(ts->coord[t_id].x, ts->coord[t_id].y);
+							goto out;
 						}
 #endif
-
+						ts->touch_count++;
+						ts->all_finger_count++;
 						input_mt_slot(ts->input_dev, t_id);
 						input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 1);
 						input_report_key(ts->input_dev, BTN_TOUCH, 1);
@@ -865,12 +851,10 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 							ts->multi_count++;
 						}
 						break;
-
 					case SEC_TS_COORDINATE_ACTION_MOVE:
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
-						if (sec_ts_is_suspended()) {
-							return;
-						}
+						if (ts->screen_off)
+							goto out;
 #endif
 						if ((ts->coord[t_id].ttype == SEC_TS_TOUCHTYPE_GLOVE) && !ts->touchkey_glove_mode_status) {
 							ts->touchkey_glove_mode_status = true;
@@ -892,7 +876,6 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 
 						ts->coord[t_id].mcount++;
 						break;
-
 					default:
 						input_dbg(true, &ts->client->dev,
 								"%s: do not support coordinate action(%d)\n", __func__, ts->coord[t_id].action);
@@ -912,7 +895,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					event_buff[3], event_buff[4], event_buff[5]);
 			break;
 		}
-
+out:
 		curr_pos++;
 		remain_event_count--;
 	} while (remain_event_count >= 0);
@@ -1204,6 +1187,12 @@ static void sec_ts_set_input_prop(struct sec_ts_data *ts, struct input_dev *dev,
 	input_set_drvdata(dev, ts);
 }
 
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event,
+				void *data);
+#endif
+
 static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct sec_ts_data *ts;
@@ -1392,6 +1381,12 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		goto err_irq;
 	}
 
+#ifdef CONFIG_FB
+	ts->fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&ts->fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
+
 #ifdef CONFIG_SECURE_TOUCH
 	if (sysfs_create_group(&ts->input_dev->dev.kobj, &secure_attr_group) < 0)
 		input_err(true, &ts->client->dev, "%s: do not make secure group\n", __func__);
@@ -1401,12 +1396,9 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	device_init_wakeup(&client->dev, true);
 
-	schedule_delayed_work(&ts->work_read_info, msecs_to_jiffies(500));
+	schedule_delayed_work(&ts->work_read_info, msecs_to_jiffies(50));
 
 	input_err(true, &ts->client->dev, "%s: done\n", __func__);
-
-	tsp_data = ts;
-	is_sec_ts_probed = true;
 
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
 	sec_ts_wake_gestures_init(ts);
@@ -1522,8 +1514,6 @@ static int sec_ts_input_open(struct input_dev *dev)
 	struct sec_ts_data *ts = input_get_drvdata(dev);
 	int ret;
 
-	ts->input_closed = false;
-
 #ifdef CONFIG_SECURE_TOUCH
 	secure_touch_stop(ts, 0);
 #endif
@@ -1538,8 +1528,6 @@ static int sec_ts_input_open(struct input_dev *dev)
 static void sec_ts_input_close(struct input_dev *dev)
 {
 	struct sec_ts_data *ts = input_get_drvdata(dev);
-
-	ts->input_closed = true;
 
 #ifdef MINORITY_REPORT
 	minority_report_sync_latest_value(ts);
@@ -1569,8 +1557,6 @@ static int sec_ts_remove(struct i2c_client *client)
 	device_init_wakeup(&client->dev, false);
 	wake_lock_destroy(&ts->wakelock);
 
-	is_sec_ts_probed = false;
-
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
 	sec_ts_wake_gestures_exit();
 #endif
@@ -1579,9 +1565,14 @@ static int sec_ts_remove(struct i2c_client *client)
 	input_mt_destroy_slots(ts->input_dev);
 	input_unregister_device(ts->input_dev);
 
+#ifdef CONFIG_FB
+	fb_unregister_client(&ts->fb_notif);
+#endif
+
 #ifdef CONFIG_SECURE_TOUCH
 	secure_touch_remove(ts);
 #endif
+
 	ts->input_dev = NULL;
 	ts->input_dev_touch = NULL;
 	ts->plat_data->power(ts, false);
@@ -1638,7 +1629,6 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	sec_ts_locked_release_all_finger(ts);
 
 	ts->plat_data->power(ts, true);
-	sec_ts_delay(70);
 	ts->power_status = SEC_TS_STATE_POWER_ON;
 	ts->touch_noise_status = 0;
 
@@ -1670,76 +1660,95 @@ out:
 	return ret;
 }
 
-void sec_ts_suspend(void)
+void sec_ts_suspend(struct input_dev *dev)
 {
 #ifdef USE_OPEN_CLOSE
+	struct sec_ts_data *ts = input_get_drvdata(dev);
 	int retval;
 
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
-	is_screen_off = true;
-
 	if (dt2w_switch_changed) {
 		dt2w_switch = dt2w_switch_temp;
 		dt2w_switch_changed = false;
 	}
 
 	if (dt2w_switch) {
-		enable_irq_wake(tsp_data->client->irq);
-		return;
+		enable_irq_wake(ts->client->irq);
+		sec_ts_locked_release_all_finger(ts);
+		goto out;
 	}
 #endif
 
-	if (tsp_data->input_dev) {
-		retval = mutex_lock_interruptible(&tsp_data->input_dev->mutex);
-		if (retval) {
-			input_err(true, &tsp_data->client->dev,
-					"%s : mutex error\n", __func__);
-			goto out;
-		}
-
-		if (!tsp_data->disabled) {
-			tsp_data->disabled = true;
-			tsp_data->input_dev->close(tsp_data->input_dev);
-		}
-
-		mutex_unlock(&tsp_data->input_dev->mutex);
+	retval = mutex_lock_interruptible(&ts->input_dev->mutex);
+	if (retval) {
+		input_err(true, &ts->client->dev,
+				"%s : mutex error\n", __func__);
+		goto out;
 	}
+
+	if (!ts->screen_off)
+		ts->input_dev->close(ts->input_dev);
+
+	mutex_unlock(&ts->input_dev->mutex);
 out:
+	ts->screen_off = true;
 	return;
 #endif
 }
 
-void sec_ts_resume(void)
+void sec_ts_resume(struct input_dev *dev)
 {
 #ifdef USE_OPEN_CLOSE
+	struct sec_ts_data *ts = input_get_drvdata(dev);
 	int retval;
 
 #ifdef CONFIG_SEC_TS_WAKE_GESTURES
-	is_screen_off = false;
 	if (dt2w_switch) {
-			disable_irq_wake(tsp_data->client->irq);
-		return;
+		disable_irq_wake(ts->client->irq);
+		sec_ts_locked_release_all_finger(ts);
+		goto out;
 	} 
 #endif
 	
-	if (tsp_data->input_dev) {
-		retval = mutex_lock_interruptible(&tsp_data->input_dev->mutex);
-		if (retval) {
-			input_err(true, &tsp_data->client->dev,
-					"%s : mutex error\n", __func__);
-			goto out;
-		}
-		if (tsp_data->disabled) {
-			tsp_data->disabled = false;
-			tsp_data->input_dev->open(tsp_data->input_dev);
-		}
-
-		mutex_unlock(&tsp_data->input_dev->mutex);
+	retval = mutex_lock_interruptible(&ts->input_dev->mutex);
+	if (retval) {
+		input_err(true, &ts->client->dev,
+				"%s : mutex error\n", __func__);
+		goto out;
 	}
+	if (ts->screen_off)
+		ts->input_dev->open(ts->input_dev);
+
+	mutex_unlock(&ts->input_dev->mutex);
 out:
+	ts->screen_off = false;
 	return;
 #endif
 }
+
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event,
+				void *data)
+{
+	struct fb_event *evdata = data;
+	struct sec_ts_data *tc_data = container_of(self, struct sec_ts_data, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+				sec_ts_resume(tc_data->input_dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+		        sec_ts_suspend(tc_data->input_dev);
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
 
 static const struct i2c_device_id sec_ts_id[] = {
 	{ SEC_TS_I2C_NAME, 0 },
