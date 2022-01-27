@@ -948,11 +948,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	struct dsi_panel_cmds *on_cmds;
 	int ret = 0;
 
-#if defined(CONFIG_TOUCHSCREEN_SEC_TS)
-	if (is_sec_ts_probed)
-		sec_ts_resume();
-#endif
-
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -1038,11 +1033,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
-
-#if defined(CONFIG_TOUCHSCREEN_SEC_TS)
-	if (is_sec_ts_probed)
-		sec_ts_suspend();
-#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
