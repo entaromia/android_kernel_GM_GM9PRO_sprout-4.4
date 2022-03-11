@@ -364,10 +364,11 @@ static struct ctl_table net_core_table[] = {
 	{
 		.procname	= "bpf_jit_limit",
 		.data		= &bpf_jit_limit,
-		.maxlen		= sizeof(int),
+		.maxlen		= sizeof(long),
 		.mode		= 0600,
-		.proc_handler	= proc_dointvec_minmax_bpf_restricted,
-		.extra1		= &one,
+		.proc_handler	= proc_dolongvec_minmax_bpf_restricted,
+		.extra1		= &long_one,
+		.extra2		= &long_max,
 	},
 #endif
 	{
