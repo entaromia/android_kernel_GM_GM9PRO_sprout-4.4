@@ -1629,6 +1629,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	sec_ts_locked_release_all_finger(ts);
 
 	ts->plat_data->power(ts, true);
+	sec_ts_delay(70);
 	ts->power_status = SEC_TS_STATE_POWER_ON;
 	ts->touch_noise_status = 0;
 
