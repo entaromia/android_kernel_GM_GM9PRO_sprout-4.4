@@ -712,11 +712,13 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		/* Use the default keyid */
 		if (default_verity_key_id())
 			key_id = veritykeyid;
+		#ifndef CONFIG_MACH_GM_GM9PRO_SPROUT
 		else if (!is_eng()) {
 			DMERR("veritykeyid= is not set");
 			handle_error();
 			return -EINVAL;
 		}
+		#endif
 	} else if (argc == 2)
 		key_id = argv[1];
 	else {
