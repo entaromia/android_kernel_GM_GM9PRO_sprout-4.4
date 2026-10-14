@@ -184,11 +184,7 @@ module_param_named(
 	debug_mask, __debug_mask, int, S_IRUSR | S_IWUSR
 );
 
-#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
-static int __weak_chg_icl_ua = 700000;
-#else
 static int __weak_chg_icl_ua = 500000;
-#endif
 module_param_named(
 	weak_chg_icl_ua, __weak_chg_icl_ua, int, S_IRUSR | S_IWUSR);
 

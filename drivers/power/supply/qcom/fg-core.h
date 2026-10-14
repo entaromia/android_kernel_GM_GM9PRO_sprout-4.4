@@ -454,9 +454,6 @@ struct fg_chip {
 	bool			use_ima_single_mode;
 	bool			qnovo_enable;
 	bool			suspended;
-#ifdef CONFIG_MACH_GM_GM9PRO_SPROUT
-	bool			report_full;
-#endif
 
 	struct completion	soc_update;
 	struct completion	soc_ready;
